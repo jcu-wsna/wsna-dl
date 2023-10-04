@@ -3,11 +3,7 @@
     <div class="q-pa-md q-gutter-md">
       <q-card flat>
         <q-card-section horizontal>
-          <q-img
-            src="src/statics/images/map-WSNA-trimmed.png"
-            width="70%"
-            fit
-          />
+          <q-img src="~assets/map-WSNA.png" width="70%" fit />
         </q-card-section>
         <!-- </q-card>
       <q-card> -->
