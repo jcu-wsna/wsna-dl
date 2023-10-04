@@ -4,6 +4,9 @@
 node_modules
 .npmrc
 
+# Debug files
+search-output.json
+
 # Python scripts
 /scripts/*.log
 /scripts/*.txt
@@ -13,6 +16,9 @@ node_modules
 .quasar
 /dist
 /quasar.config.*.temporary.compiled*
+
+# PWA related directories
+/src-pwa
 
 # Cordova related directories and files
 /src-cordova/node_modules
