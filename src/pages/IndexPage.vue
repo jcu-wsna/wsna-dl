@@ -33,7 +33,6 @@
               future, we would like to extend this digital library to additional
               catchments.
             </p>
-
             <p>
               <a
                 href="https://www.crcna.com.au/research/projects/water-security-northern-australia-implementation-phase"
