@@ -7,6 +7,9 @@ node_modules
 # Debug files
 search-output.json
 
+# temporary files
+~*.*
+
 # Python scripts
 /scripts/*.log
 /scripts/*.txt
