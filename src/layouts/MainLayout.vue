@@ -37,8 +37,7 @@
 
 <style lang="scss">
 .bg-image {
-  background-image: url("src/statics/images/pexels-pixabay-355700.jpg");
-  // background-image: url("src/statics/images/pexels-hilary-halliwell-612341.jpg");
+  background-image: url("/images/pexels-pixabay-355700.jpg");
   background-repeat: no-repeat;
   background-size: fit;
 }

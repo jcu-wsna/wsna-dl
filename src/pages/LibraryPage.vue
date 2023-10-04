@@ -30,7 +30,7 @@
 <script setup>
 import { ref } from "vue";
 import itemsjs from "itemsjs";
-import libraryIndex from "src/statics/library-index.json";
+import libraryIndex from "components/library-index.json";
 import DLFilterMenu from "components/filter-menu.vue";
 import DLDocumentList from "components/document-list.vue";
 

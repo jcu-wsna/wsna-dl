@@ -20,10 +20,10 @@ import argparse
 
 # paths and filenames
 LIBRARY_INDEX_FILE = Path("./data/library-index.csv").resolve()
-LIBRARY_DOCS_PATH = Path("../src/statics/data/").resolve()
-JSON_PATH = Path("../src/statics/").resolve()
+LIBRARY_DOCS_PATH = Path("../public/documents").resolve()
+JSON_PATH = Path("../src/components/").resolve()
 JSON_FILENAME = "library-index.json"
-DOWNLOAD_PATH = "/statics/data/"
+DOWNLOAD_PATH = "/documents/"
 
 # library-index.csv column names used in processing
 #
@@ -220,7 +220,6 @@ if __name__ == "__main__":
 
         for row in csv.DictReader(fd):
             file_info = None
-            print("type(row) (", type(row))  # DEBUG
 
             # strip any trailing whitespace from each row value
             for key, value in row.items():
