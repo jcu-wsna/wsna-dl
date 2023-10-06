@@ -18,6 +18,11 @@
           updateFiltersAndSearch(facet, values);
         }
       "
+      @updatedSearch="
+        (queryText) => {
+          updateQueryTextAndSearch(queryText);
+        }
+      "
     />
   </q-drawer>
 
@@ -36,13 +41,9 @@ import DLDocumentList from "components/document-list.vue";
 
 let itemsjsInstance;
 
-//  selectedFilters:
-//  keys are filter categories, values are lists of options in the category
-//  that have been selected. Don't need to include categories with no
-//  selections.
 let selectedFilters = {};
-const filteredDocs = ref([]);
 let searchQuery = "";
+const filteredDocs = ref([]);
 let flatFilterList = ref([]);
 
 // this structure is required by itemsjs
@@ -94,7 +95,7 @@ function resetFilters() {
 
 function getDocList(fullDocList) {
   itemsjsInstance = itemsjs(fullDocList, filterConfig);
-  searchQuery = "";
+
   // DEBUG
   console.log("getDocList: selectedFilters.value - ", selectedFilters);
 
@@ -139,6 +140,17 @@ function updateFiltersAndSearch(facet, option) {
   );
 }
 
+function updateQueryTextAndSearch(queryText) {
+  searchQuery = queryText;
+  filteredDocs.value = getDocList(libraryIndex);
+  console.log(
+    "librarypage: updateQueryTextAndSearch: selectedFilters(",
+    selectedFilters,
+    ")"
+  );
+}
+
 resetFilters();
+searchQuery = ""; // reset search text
 filteredDocs.value = getDocList(libraryIndex);
 </script>
