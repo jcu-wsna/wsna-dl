@@ -11,6 +11,7 @@
         autogrow
         counter
         maxlength="20"
+        @keyup.enter="updatedSearch"
       >
         <template v-slot:after>
           <q-btn
@@ -19,7 +20,7 @@
             flat
             icon="search"
             type="submit"
-            @click="updatedSearch()"
+            @click="updatedSearch"
           />
         </template>
       </q-input>
@@ -75,6 +76,7 @@ function updatedFilter(cat, option) {
 }
 
 function updatedSearch() {
+  searchText.value = searchText.value.trim();
   console.log("filter-menu: searchText(", searchText.value, ")"); // DEBUG
   emit("updatedSearch", searchText.value);
 }

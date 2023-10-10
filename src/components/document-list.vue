@@ -1,7 +1,9 @@
 <template>
   <div class="q-pa-md" style="max-width: 600px">
     <q-card flat
-      ><p class="bg-accent">{{ docs.length }} Documents</p></q-card
+      ><p class="bg-accent">
+        {{ docs.length }} Document {{ docs.length > 1 ? "s found" : " found" }}
+      </p></q-card
     >
 
     <q-list dense bordered separator>
