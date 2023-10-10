@@ -4,16 +4,26 @@
 node_modules
 .npmrc
 
+# Avoid duplicate copies of documents,
+# these will all be in the gh_pages branch anyway.
+public/documents
+
 # Debug files
 search-output.json
 
 # temporary files
 ~*.*
+scripts/*.log
+scripts/*.txt
+scripts/*.out
+scripts/*.tmp
+scripts/inputs/*
+scripts/outputs/*
 
-# Python scripts
-/scripts/*.log
-/scripts/*.txt
-/scripts/*.out
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
 
 # Quasar core related directories
 .quasar
@@ -48,3 +58,5 @@ yarn-error.log*
 
 # local .env files
 .env.local*
+
+
