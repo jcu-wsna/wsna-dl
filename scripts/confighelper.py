@@ -26,23 +26,26 @@ def get_docs_config(config):
     )
 
 
-def get_libindex_config(config):
-    libindex_config = namedtuple("LibIndex", ["csv_filename", "json_filename"])
-    return libindex_config(
-        csv_filename=Path(config["Library-index"]["libraryIndexCSV"]).resolve(),
-        json_filename=Path(config["Library-index"]["libraryIndexJSON"]).resolve(),
-    )
-
-
 def get_label_config(config):
     label_config = namedtuple(
-        "Labels", ["id", "access", "filename", "publishedURL", "status"]
+        "Labels",
+        [
+            "id",
+            "access",
+            "filename",
+            "publishedURL",
+            "displayURL",
+            "displayIcon",
+            "status",
+        ],
     )
     return label_config(
         id=config["Column-labels"]["id"],
         access=config["Column-labels"]["access"],
         filename=config["Column-labels"]["filename"],
         publishedURL=config["Column-labels"]["publishedURL"],
+        displayURL=config["Column-labels"]["displayURL"],
+        displayIcon=config["Column-labels"]["displayIcon"],
         status=config["Column-labels"]["status"],
     )
 
@@ -77,19 +80,46 @@ def get_icons(config):
 
 
 def get_urls(config):
-    urls = namedtuple("URLs", ["physical_library", "contact_us"])
+    urls = namedtuple("URLs", ["physical_library", "contact_us", "download"])
     return urls(
         physical_library=config["URLs"]["physicalLibrary"],
         contact_us=config["URLs"]["contactUs"],
+        download=config["URLs"]["download"],
+    )
+
+
+def get_internal_files():
+    # these are hard-coded file paths, for internal processing
+    # use only so they don't need to be configurable.
+    local_paths = namedtuple(
+        "LocalPaths",
+        [
+            "doc_display_config",
+            "search_config",
+            "filter_config",
+            "query_config",
+            "excel_file",
+            "libindex_csv",
+            "libindex_json",
+        ],
+    )
+    return local_paths(
+        doc_display_config=Path("outputs/doc-display-config.csv").resolve(),
+        search_config=Path("outputs/search-config.csv").resolve(),
+        filter_config=Path("outputs/filter-config.csv").resolve(),
+        query_config=Path("outputs/query-config.json").resolve(),
+        excel_file=Path("inputs/library-index.xlsx").resolve(),
+        libindex_csv=Path("outputs/library-index.csv").resolve(),
+        libindex_json=Path("outputs/library-index.json").resolve(),
     )
 
 
 # load config info for use
 config = load_config()
 docs = get_docs_config(config)
-libindex = get_libindex_config(config)
 label = get_label_config(config)
 access_types = get_access_values(config)
 status_types = get_status_values(config)
 icons = get_icons(config)
 urls = get_urls(config)
+files = get_internal_files()

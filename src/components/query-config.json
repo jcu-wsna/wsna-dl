@@ -1,0 +1,26 @@
+{
+  "sortings": {
+    "name_asc": { "field": "Title", "order": "asc" },
+    "year_name_asc": { "field": ["Year", "Title"], "order": ["desc", "asc"] }
+  },
+  "searchableFields": [
+    "Catchment",
+    "Region",
+    "State",
+    "Habitat_type",
+    "Topic",
+    "Keywords",
+    "Authors",
+    "Title",
+    "Abstract_Description"
+  ],
+  "aggregations": {
+    "Catchment": { "title": "Catchment", "size": 4 },
+    "Region": { "title": "Region", "size": 4 },
+    "State": { "title": "State", "size": 3 },
+    "Habitat_type": { "title": "Habitat_type", "size": 6 },
+    "Category": { "title": "Category", "size": 6 },
+    "Access_Rights": { "title": "Access_Rights", "size": 2 },
+    "Year": { "title": "Year", "size": 25 }
+  }
+}

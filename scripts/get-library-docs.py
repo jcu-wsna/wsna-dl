@@ -22,7 +22,11 @@ import shutil
 import csv
 import structlog
 import argparse
-import confighelper
+from confighelper import files, docs, label, status_types, access_types
+import libhelper
+import unicodedata
+
+UNICODE_FORM = "NFKD"
 
 
 def get_filename_path_dict(log, src_path, pattern):
@@ -31,12 +35,15 @@ def get_filename_path_dict(log, src_path, pattern):
     #
     file_list = {}
     for file_path in src_path.glob(pattern):
-        file_list[file_path.name] = file_path
-        # log.debug(
-        #     "get_filename_path_dict: file_path.name({}), file_path({})".format(
-        #         file_path.name, file_path
-        #     )
-        # )
+        if file_path.name != ".DS_Store":
+            file_list[unicodedata.normalize(UNICODE_FORM, file_path.name)] = file_path
+            # log.debug(
+            #     "get_filename_path_dict: file_path.name({}), file_path({})".format(
+            #         file_path.name, file_path
+            #     )
+            # )
+
+    # log.debug("get_filename_path_dict: filename list: {}".format(file_list.keys()))
     return file_list
 
 
@@ -60,23 +67,12 @@ if __name__ == "__main__":
     if is_dry_run:
         log.info("This is a dry-run, no changes will be made")
 
-    # load config info for use
-    config = confighelper.load_config()
-    docs = confighelper.get_docs_config(config)
-
-    log.debug("docs config: {}".format(docs))
-
-    libindex = confighelper.get_libindex_config(config)
-    label = confighelper.get_label_config(config)
-    access_types = confighelper.get_access_values(config)
-    status_types = confighelper.get_status_values(config)
-
     # log some useful information
     log.info("Copying files from {}".format(docs.src_path))
     log.info("Copying files to {}".format(docs.dest_path))
 
     src_file_list = get_filename_path_dict(log, docs.src_path, docs.file_pattern)
-    log.info("Finished building filename and path dictionary")
+    log.debug("Finished building filename and path dictionary")
 
     # setup some counters for stats at the end
     num_empty_filenames = 0
@@ -85,11 +81,12 @@ if __name__ == "__main__":
     num_copied_files = 0
 
     dest_file_list = os.listdir(docs.dest_path)
+    dest_file_list.remove(".DS_Store")  # just in case the folder is on a Mac
     # log.debug("dest_file_list ({})".format(dest_file_list))
     log.info("#files in {} is {}".format(docs.src_path, len(src_file_list)))
     log.info("#files in {} is {}".format(docs.dest_path, len(dest_file_list)))
 
-    with open(libindex.csv, encoding="utf-8") as fd:
+    with open(files.libindex_csv, encoding="utf-8") as fd:
         for row in csv.DictReader(fd):
             # strip the trailing whitespace from each row value
             for key, value in row.items():
@@ -127,7 +124,9 @@ if __name__ == "__main__":
                 try:
                     # log.debug("recorded_pdf_filename: {}".format(src_filename))
                     # log.debug("source_file_list {}".format(src_file_list))
-                    src_filepath = src_file_list[src_filename]
+                    src_filepath = src_file_list[
+                        unicodedata.normalize(UNICODE_FORM, src_filename)
+                    ]
                 except:
                     log.warning(
                         "ID {} | File {} listed in spreadsheet but not found in {}".format(
@@ -138,10 +137,9 @@ if __name__ == "__main__":
                     continue  # no file to copy, log it and move on
 
                 # replace troublesome characters to create destination file name
-                normalised_filename = (
-                    row[label.filename].replace(" ", "_").replace("/", "_")
+                normalised_filename = libhelper.get_normalised_filename(
+                    row[label.filename]
                 )
-                # log.debug("normalised_filename ({})".format(normalised_filename))
 
                 # if the file doesn't already exist in the destination folder
                 #  then copy it in. Exit the script if there is an error.

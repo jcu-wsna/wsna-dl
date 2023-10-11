@@ -14,216 +14,233 @@ import pandas as pd
 import json
 import os
 import csv
+import re
 import structlog
 import argparse
-from confighelper import docs, label, access_types, icons, libindex, urls
-
-DOC_DETAILS_CONFIG = "outputs/doc-display-config.csv"
+import libhelper
+from confighelper import (
+    docs,
+    label,
+    access_types,
+    status_types,
+    icons,
+    urls,
+    files,
+)
 
 # columns that can contain multiple comma separated tokens
-MULTI_OPTION_COLS = ["Catchment", "State", "Habitat_type"]
+# TODO - move into a new row in the spreadsheet like the search and filter flags
+MULTI_OPTION_COLS = ["Catchment", "State", "Habitat_type", "Region"]
 
-final_json = []
 is_dry_run = False
 
 
-def split_multi_option_values(data):
-    # data is a list of dictionary items
-    #
-    # Work through the list and for each dictionary item:
+def split_multi_option_values(lib_data):
+    # Split the multi-option columns in to lists of strings
+    # hopefully this won't break the lib_docs.to_json function
+
     #   For the keys in MULTI_OPTION_COLS, the value of the item for that key is
     #   a string containing 1 or more tokens separated by commas.
     #   Extract the tokens and replace the value with an array of strings
     #   where each string is a token.
     #
-    for item in data:
-        for key in MULTI_OPTION_COLS:
-            if key in item.keys():
-                item[key] = [elem.strip() for elem in item[key].split(",")]
-
-    return data
-
-
-def normalise_file_name(filename):
-    return filename.replace(" ", "_").replace("/", "_")
-
-
-def set_url_to_JCUlibrary(log, file_info):
-    file_info[label.displayURL] = urls.physical_library
-    file_info[label.displayIcon] = icons.library
-    return file_info
-
-
-def set_url_to_contact_support(log, file_info):
-    file_info[label.displayURL] = urls.contact_us
-    file_info[label.displayIcon] = icons.support
-    return file_info
-
-
-def set_url_to_external_site(log, file_info):
-    if file_info[label.publishedURL] == "":
-        log.error(
-            "ID {} | {} is {} and {} is empty.".format(
-                file_info[label.id],
-                label.access,
-                access_types.publisher,
-                label.publishedURL,
-            )
+    for column in MULTI_OPTION_COLS:
+        log.debug("split_multi_option_values: splitting {}".format(column))
+        lib_data[column] = (
+            lib_data[column]
+            .str.split(",")
+            .apply(lambda x: [item.strip() for item in x])
         )
-        return None
+        log.debug("split_multi_option_values: lib_data[{}]\n".format(lib_data[column]))
 
-    file_info[label.displayURL] = file_info[label.publishedURL]
-    file_info[label.displayIcon] = icons.webpage
-    return file_info
+    return lib_data
 
 
-def set_url_to_download_file(log, file_info, os):
-    """Check a file exists and normalise its name if necessary.
-
-    This function should only be called if ACCESS value == ACCESS_OPEN,
-    so there should be a file for the document.
-
-    Log warnings if there is no file name in the file_info or if the file doesn't exist.
-    """
-
-    # Extract existing name and generate web friendly name (normalise)
-    original_filename = file_info[label.filename]
-    normalised_filename = normalise_file_name(original_filename)
-
-    if original_filename == "":
-        # This file doesn't have a PDF file name in the csv file
-        log.error(
-            "ID {} | {} document has no {} value in spreadsheet. ".format(
-                file_info[label.id], access_types.open, label.filename
-            )
-        )
-
-        return None
-
-    # If the original file name from the csv was normalised,
-    # we need to rename the file to match
-    if (original_filename != normalised_filename) and os.path.isfile(original_filename):
-        try:
-            if not is_dry_run:
-                os.rename(original_filename, normalised_filename)
-
-            log.info(
-                "ID {} | Renamed {} to {}.".format(
-                    original_filename, normalised_filename
-                )
-            )
-        except Exception as ex:
-            log.exception(
-                "ID {} | Rename of {} failed.".format(
-                    file_info[label.id], original_filename
-                )
-            )
-            return None
-
-    if is_dry_run:
-        if not (
-            os.path.isfile(original_filename) or os.path.isfile(normalised_filename)
-        ):
-            log.error(
-                "ID {} | {} document does not exist.".format(
-                    file_info[label.id], access_types.open
-                )
-            )
-            return None
-        else:
-            log.info(
-                "ID {} | Document exists and will be added to JSON file".format(
-                    file_info[label.id]
-                )
-            )
-
-        return file_info
-
-    # Check if a file with the normalised name exists before setting url to the
-    # normalised file name
-    if os.path.isfile(normalised_filename):
-        # the download url is served from a different base directory
-        # hence the different path
-        file_info[label.displayURL] = "{}{}".format(docs.urlPath, normalised_filename)
-
-        log.info(
-            "ID {} | Setting {} to {}".format(
-                file_info[label.id], label.displayURL, file_info[label.displayURL]
-            )
-        )
-    else:
-        log.error(
-            "ID {} | {} document, {}, does not exist.".format(
-                file_info[label.id], access_types.open, normalised_filename
-            )
-        )
-        return None
-
-    file_info[label.displayIcon] = icons.download
-    return file_info
-
-
-def create_library_index(log, is_dry_run, visible_details):
+def create_library_index(log, is_dry_run, lib_data):
     # log some useful information
-    log.info("Creating/renaming files in {}".format(docs.dest_path))
-    log.info("Loading csv file from {}".format(libindex.csv))
+    log.info("Creating library_index for website, {}".format(files.libindex_json))
 
-    with libindex.csv.open(mode="r", encoding="utf-8") as fd:
-        # change cwd to the directory which contains data files
-        os.chdir(docs.dest_path)
+    # set label.url value for access via a physical library
+    lib_data.loc[
+        lib_data[label.access] == access_types.physical_library, label.displayURL
+    ] = urls.physical_library
+    lib_data.loc[
+        lib_data[label.access] == access_types.physical_library, label.displayIcon
+    ] = icons.library
 
-        for row in csv.DictReader(fd):
-            file_info = None
+    # set label.url value for open access documents (can download directly from the library)
+    lib_data.loc[lib_data[label.access] == access_types.open, label.displayURL] = (
+        urls.download + lib_data[label.filename]
+    )
+    lib_data.loc[
+        lib_data[label.access] == access_types.open, label.displayIcon
+    ] = icons.download
 
-            # strip any trailing whitespace from each row value
-            for key, value in row.items():
-                row[key] = value.strip()
-
-            # setting the URL based on the ACCESS value for the document
-            if access_types.physical_library == row[label.access].lower():
-                file_info = set_url_to_JCUlibrary(log, row)
-            elif access_types.open == row[label.access].lower():
-                file_info = set_url_to_download_file(log, row, os)
-            elif access_types.publisher == row[label.access].lower():
-                file_info = set_url_to_external_site(log, row)
-            else:
-                log.error(
-                    "ID {} | Invalid {} field value '{}'".format(
-                        row[label.id], label.access, row[label.access]
-                    )
-                )
-
-            if file_info is not None:
-                final_json.append(file_info)
+    # set label.url value for documenets accessed from an external website
+    lib_data.loc[
+        lib_data[label.access] == access_types.publisher, label.displayURL
+    ] = lib_data[label.publishedURL]
+    lib_data.loc[
+        lib_data[label.access] == access_types.publisher, label.displayIcon
+    ] = icons.webpage
 
     # convert the list of dictionary items to json string format
-    output = json.dumps(split_multi_option_values(final_json))
+    json_lib_data = lib_data.to_json(orient="records")
 
-    # write to file
-    json_array_output_file = libindex.json.open(mode="w", encoding="utf-8")
-    json_array_output_file.write(output)
+    if not is_dry_run:
+        # write to file
+        json_array_output_file = files.libindex_json.open(mode="w", encoding="utf-8")
+        json_array_output_file.write(json_lib_data)
 
-    log.info("Wrote JSON file to {}".format(libindex.json))
+        log.info("Wrote JSON file to {}".format(files.libindex_json))
+
+    return lib_data
 
 
-def create_search_config(log, is_dry_run):
-    return
+def get_searchable_fields(log):
+    data = pd.read_csv(files.search_config, index_col=label.id)
+    search_fields = data.columns[data.iloc[0]].to_list()
+    log.info("The searchable fields for libary are: {}".format(search_fields))
+    return search_fields
 
 
-def create_filter_config(log, is_dry_run):
-    #
-    return
+def get_filter_list(log):
+    data = pd.read_csv(files.filter_config, index_col=label.id)
+    filter_items = data.columns[data.iloc[0]].to_list()
+    log.info("The filter fields for libary are: {}".format(filter_items))
+    return filter_items
 
 
 def remove_private_details(log, lib_data):
     # Read in the appropriate config file and drop any columns
     # from lib_data that are set to False in the config file
 
-    public_labels = pd.read_csv(DOC_DETAILS_CONFIG)
-    lib_data = lib_data.drop(columns=public_labels.index[public_labels].to_list())
-    log.info("Dropped all unnecessary columns as listed in {}", DOC_DETAILS_CONFIG)
+    public_labels = pd.read_csv(files.doc_display_config, index_col=label.id)
+    col_list = public_labels.columns[~public_labels.iloc[0]].to_list()
+    lib_data = lib_data.drop(columns=col_list)
+    log.info("Dropped {} columns".format(col_list))
 
     return lib_data
+
+
+def remove_invalid_access_rows(log, lib_data):
+    # Get a list of docs with an invalid access type
+    problem_docs = lib_data[
+        ~lib_data[label.access].isin(access_types._asdict().values())
+    ]
+    # log a warning message for these problem docs
+    for index, row in problem_docs.iterrows():
+        log.warning(
+            "ID {} | Invalid access value, {} ".format(index, row[label.access])
+        )
+
+    # log.debug("remove_invalid_access_rows: problem_docs\n{}".format(problem_docs))
+
+    # Drop any docs with invalid access values
+    lib_data = lib_data.drop(index=problem_docs.index.to_list())
+    return lib_data
+
+
+def remove_openaccess_nofilename_rows(log, lib_data):
+    # Remove all rows where access is open and filename is empty
+
+    # Get the list of files for the library.
+    doc_list = os.listdir(docs.dest_path)
+
+    # Get a list of the open access docs that don't have a file in the library
+    problem_docs = lib_data[
+        (lib_data[label.access] == access_types.open)
+        & (~lib_data[label.filename].isin(doc_list))
+    ]
+    # log a warning message for these problem docs
+    for index, doc in problem_docs.iterrows():
+        log.warning(
+            "ID {} | {} access document file is missing, {}".format(
+                index, access_types.open, doc[label.filename]
+            )
+        )
+
+    # Drop any open access documents that we don't have a copy of the document for
+    lib_data = lib_data.drop(index=problem_docs.index.to_list())
+    return lib_data
+
+
+def remove_publisheraccess_nourl_rows(log, lib_data):
+    # Get a list of the external access docs that don't have a URL in the lib data
+    problem_docs = lib_data[
+        (lib_data[label.access] == access_types.publisher)
+        & (lib_data[label.publishedURL] == "")
+    ]
+    # log a warning message for these problem docs
+    for index, doc in problem_docs.iterrows():
+        log.warning(
+            "ID {} | Doc with {} access {} value is empty".format(
+                index, access_types.publisher, label.publishedURL
+            )
+        )
+
+    # Drop any open access documents that we don't have a copy of the document for
+    lib_data = lib_data.drop(index=problem_docs.index.to_list())
+    return lib_data
+
+
+def remove_nonactive_rows(log, lib_data):
+    # Drop all rows that don't have status set to Active
+    # unless there is no Status column
+    if label.status in lib_data.columns:
+        lib_data = lib_data[lib_data.Status == status_types.active]
+        log.info("Extracted only the {} records to process".format(status_types.active))
+
+    return lib_data
+
+
+def create_query_config(log, lib_data, search_fields, filter_fields):
+    # TODO Sorting config is still hard-coded, need to fix this at some point
+    log.debug("about to start create_query_config function")
+
+    # build aggregations structure as a Dictionary
+    filters = {}
+    for field in filter_fields:
+        field_id = re.sub(
+            r"[^A-Za-z0-9]", "_", field
+        )  # replace spaces etc with underscores
+
+        if field in MULTI_OPTION_COLS:
+            unique_filters = set(x for sublist in lib_data[field] for x in sublist)
+        else:
+            unique_filters = lib_data[field].unique().tolist()
+
+        log.debug(
+            "create_query_string: field {}, field_id {}, unique_filters: {}".format(
+                field, field_id, unique_filters
+            )
+        )
+        filters[field_id] = {"title": field, "size": len(unique_filters)}
+
+    query_config = {
+        "sortings": {
+            "name_asc": {
+                "field": "Title",
+                "order": "asc",
+            },
+            "year_name_asc": {
+                "field": ["Year", "Title"],
+                "order": ["desc", "asc"],
+            },
+        },
+        "searchableFields": search_fields,
+        "aggregations": filters,
+    }
+
+    log.debug("create_query_config: query_config({})".format(query_config))
+
+    # Create/overwrite query_config json file
+    # See confighelper.py for file names
+    config_file = files.query_config.write_text(
+        json.dumps(query_config), encoding="utf-8"
+    )
+
+    log.info("Query config into written to {}".format(files.query_config))
 
 
 if __name__ == "__main__":
@@ -245,9 +262,23 @@ if __name__ == "__main__":
     if is_dry_run:
         log.info("This is a dry-run, no changes will be made")
 
-    lib_data = pd.read_csv(libindex.csv_filename, index_col=label.id)
-    lib_data = remove_private_details(log, lib_data)  # TODO - test
-    create_library_index(log, is_dry_run, lib_data)
-    create_search_config(log, is_dry_run)  # TODO - write
-    create_filter_config(log, is_dry_run)  # TODO - write
-    log.info("create-library-index creation is complete")
+    log.info("Loading csv file from {}".format(files.libindex_csv))
+
+    # Read in data from the library-index.csv file and ensure that
+    # there are no leading or trailing spaces on the contents
+    lib_data = pd.read_csv(files.libindex_csv, index_col=label.id, dtype="str")
+    lib_data = lib_data.map(lambda x: x.strip() if type(x) == str else x)
+
+    lib_data = remove_nonactive_rows(log, lib_data)
+    lib_data = remove_invalid_access_rows(log, lib_data)
+    lib_data = remove_openaccess_nofilename_rows(log, lib_data)
+    lib_data = remove_publisheraccess_nourl_rows(log, lib_data)
+    # must call remove_nonactive_rows last in case it removes a
+    # column needed for other processing
+    lib_data = remove_private_details(log, lib_data)
+    lib_data = split_multi_option_values(lib_data)
+
+    lib_data = create_library_index(log, is_dry_run, lib_data)
+    create_query_config(log, lib_data, get_searchable_fields(log), get_filter_list(log))
+
+    log.info("library index and query config file creation is complete")
