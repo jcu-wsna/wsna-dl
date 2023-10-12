@@ -1,12 +1,10 @@
 <template>
   <q-page padding>
-    <div class="q-pa-md q-gutter-md">
+    <div class="q-pa-md q-gutter-md rows">
       <q-card flat>
-        <q-card-section horizontal>
+        <q-card-section horizontal class="q-mx-sm row justify-center">
           <q-img src="~assets/map-WSNA.png" width="70%" fit />
         </q-card-section>
-        <!-- </q-card>
-      <q-card> -->
         <q-card-section>
           <div>
             <p>
@@ -74,6 +72,30 @@
             permission of the author to access. Contact us if you cannot access
             any material.
           </p>
+        </q-card-section>
+        <q-separator inset />
+        <q-card-section class="q-mx-md row justify-center">
+          <q-img
+            src="images/JCU Logo - Horizontal RGB.png"
+            alt="James Cook University (JCU)"
+            class="q-ma-md col-auto"
+            width="200px"
+            fit="contain"
+          />
+          <q-img
+            src="images/charles-darwin-uni-logo.svg"
+            alt="Charles Darwin University"
+            class="q-ma-lg col-auto"
+            width="200px"
+            fit="contain"
+          />
+          <q-img
+            src="images/cqu-logo.png"
+            alt="Central Queensland University (CQU)"
+            class="q-ma-md col-auto"
+            width="200px"
+            fit="contain"
+          />
         </q-card-section>
       </q-card>
     </div>

@@ -37,7 +37,7 @@
 
 <style lang="scss">
 .bg-image {
-  background-image: url("/images/pexels-pixabay-355700.jpg");
+  background-image: url("/images/header-image.jpg");
   background-repeat: no-repeat;
   background-size: fit;
 }

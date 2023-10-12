@@ -4,7 +4,7 @@
   <q-expansion-item
     expand-separator
     :label="docdata.Title"
-    :icon="docdata.icon"
+    :icon="docdata.Icon"
     :href="docdata.URL"
     target="_blank"
   >
