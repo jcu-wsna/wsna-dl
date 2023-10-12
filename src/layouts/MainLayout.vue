@@ -5,7 +5,7 @@
         <q-toolbar class="bg-primary text-accent transparent">
           <q-toolbar-title>
             <h4 class="text-center">
-              Water Security for Northern Australia Digital Library
+              North Australia Water Resources Digital Library
             </h4>
           </q-toolbar-title>
         </q-toolbar>

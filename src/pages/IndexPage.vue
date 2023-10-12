@@ -20,8 +20,8 @@
             </p>
 
             <p>
-              The Water Security for Northern Australia digital library provides
-              a platform which compiles and provides access to key scientific
+              North Australia Water Resources Digital Library provides a
+              platform which compiles and provides access to key scientific
               reports, publications and data on previous research for 4 selected
               river catchments in northern Australia where pressure for
               increased water utilisation is high – Ord (WA), Daly-Katherine

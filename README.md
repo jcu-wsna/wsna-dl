@@ -1,8 +1,8 @@
-# WSNA-DL (water-security-dl)
+# North Australia Water Resources Digital LIbrary
 
-Website is published to https://wsna-dl.github.io
+Website is published to https://nawrdl.github.io
 
-A digital library for publications relating to water security in Northern Australia
+A digital library for publications relating to water resources in Northern Australia
 
 Note: The website expects a JSON file in the /src/statics directory. The file should contain a list of documents, each document has a set of details that describe it. It MUST have an "id" and a "title" detail. The rest can be whatever you like.
 

@@ -6,7 +6,7 @@
   <!-- <p>filteredDocs.data.aggregations({{ filteredDocs.data.aggregations }})</p> -->
   <q-drawer
     show-if-above
-    :width="250"
+    :width="200"
     :breakpoint="700"
     class="bg-secondary text-black"
   >
