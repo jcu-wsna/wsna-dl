@@ -40,3 +40,13 @@ full_display_data = (
     .replace({"FullDisplay_yes": True, "FullDisplay_no": False})
     .to_csv(files.doc_display_config, index=False)
 )
+
+print(
+    "{}\n converted to\n {},\n {},\n {}\n and {}".format(
+        files.excel_file,
+        files.libindex_csv,
+        files.filter_config,
+        files.search_config,
+        files.doc_display_config,
+    )
+)
