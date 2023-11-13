@@ -76,8 +76,15 @@
         <q-separator inset />
         <q-card-section class="q-mx-md row justify-center">
           <q-img
-            src="images/JCU Logo - Horizontal RGB.png"
+            src="images/crcna-logo.jpg"
             alt="James Cook University (JCU)"
+            class="q-ma-md col-auto"
+            width="200px"
+            fit="contain"
+          />
+          <q-img
+            src="images/JCU Logo - Horizontal RGB.png"
+            alt="Cooperative Research Centre for Developing Northern Australia (CRNA)"
             class="q-ma-md col-auto"
             width="200px"
             fit="contain"
