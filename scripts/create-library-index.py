@@ -15,6 +15,7 @@ import json
 import os
 import csv
 import re
+import logging
 import structlog
 import argparse
 import libhelper
@@ -45,7 +46,11 @@ def split_multi_option_values(lib_data):
     #   where each string is a token.
     #
     for column in MULTI_OPTION_COLS:
-        log.debug("split_multi_option_values: splitting {}".format(column))
+        log.debug(
+            "split_multi_option_values: splitting {}\n  orig\n{} \nsplit values{}".format(
+                column, lib_data[column], lib_data[column].str.split(",")
+            )
+        )
         lib_data[column] = (
             lib_data[column]
             .str.split(",")
@@ -57,7 +62,6 @@ def split_multi_option_values(lib_data):
 
 
 def create_library_index(log, is_dry_run, lib_data):
-    # log some useful information
     log.info("Creating library_index for website, {}".format(files.libindex_json))
 
     # set label.url value for access via a physical library
@@ -76,7 +80,7 @@ def create_library_index(log, is_dry_run, lib_data):
         lib_data[label.access] == access_types.open, label.displayIcon
     ] = icons.download
 
-    # set label.url value for documenets accessed from an external website
+    # set label.url value for documents accessed from an external website
     lib_data.loc[
         lib_data[label.access] == access_types.publisher, label.displayURL
     ] = lib_data[label.publishedURL]
@@ -86,9 +90,10 @@ def create_library_index(log, is_dry_run, lib_data):
 
     # convert the list of dictionary items to json string format
     json_lib_data = lib_data.to_json(orient="records")
+    log.info("Documents in library, final count: {}".format(lib_data.index.size))
 
     if not is_dry_run:
-        # write to file
+        # write library-index file for the website to use
         json_array_output_file = files.libindex_json.open(mode="w", encoding="utf-8")
         json_array_output_file.write(json_lib_data)
 
@@ -98,16 +103,16 @@ def create_library_index(log, is_dry_run, lib_data):
 
 
 def get_searchable_fields(log):
-    data = pd.read_csv(files.search_config, index_col=label.id)
+    data = pd.read_csv(files.search_config)
     search_fields = data.columns[data.iloc[0]].to_list()
     log.info("The searchable fields for libary are: {}".format(search_fields))
     return search_fields
 
 
 def get_filter_list(log):
-    data = pd.read_csv(files.filter_config, index_col=label.id)
+    data = pd.read_csv(files.filter_config)
     filter_items = data.columns[data.iloc[0]].to_list()
-    log.info("The filter fields for libary are: {}".format(filter_items))
+    log.info("The filter fields for library are: {}".format(filter_items))
     return filter_items
 
 
@@ -115,7 +120,7 @@ def remove_private_details(log, lib_data):
     # Read in the appropriate config file and drop any columns
     # from lib_data that are set to False in the config file
 
-    public_labels = pd.read_csv(files.doc_display_config, index_col=label.id)
+    public_labels = pd.read_csv(files.doc_display_config)
     col_list = public_labels.columns[~public_labels.iloc[0]].to_list()
     lib_data = lib_data.drop(columns=col_list)
     log.info("Dropped {} columns".format(col_list))
@@ -138,6 +143,12 @@ def remove_invalid_access_rows(log, lib_data):
 
     # Drop any docs with invalid access values
     lib_data = lib_data.drop(index=problem_docs.index.to_list())
+    log.info(
+        "Number of docs dropped due invalid access types is {}".format(
+            problem_docs.index.size
+        )
+    )
+
     return lib_data
 
 
@@ -162,6 +173,12 @@ def remove_openaccess_nofilename_rows(log, lib_data):
 
     # Drop any open access documents that we don't have a copy of the document for
     lib_data = lib_data.drop(index=problem_docs.index.to_list())
+    log.info(
+        "Number of docs dropped due to access is {} but no file found is {}".format(
+            access_types.open, problem_docs.index.size
+        )
+    )
+
     return lib_data
 
 
@@ -181,15 +198,27 @@ def remove_publisheraccess_nourl_rows(log, lib_data):
 
     # Drop any open access documents that we don't have a copy of the document for
     lib_data = lib_data.drop(index=problem_docs.index.to_list())
+    log.info(
+        "Number of docs dropped due to being {} but having no URL is {}".format(
+            access_types.publisher, problem_docs.index.size
+        )
+    )
     return lib_data
 
 
 def remove_nonactive_rows(log, lib_data):
     # Drop all rows that don't have status set to Active
     # unless there is no Status column
+    initial_num_docs = lib_data.index.size
     if label.status in lib_data.columns:
         lib_data = lib_data[lib_data.Status == status_types.active]
         log.info("Extracted only the {} records to process".format(status_types.active))
+
+    log.info(
+        "Number of docs dropped due to Status not set to {} is {}".format(
+            status_types.active, initial_num_docs - lib_data.index.size
+        )
+    )
 
     return lib_data
 
@@ -197,14 +226,24 @@ def remove_nonactive_rows(log, lib_data):
 def create_query_config(log, lib_data, search_fields, filter_fields):
     # TODO Sorting config is still hard-coded, need to fix this at some point
     log.debug("about to start create_query_config function")
+    log.info("Search fields {}".format(search_fields))
+    log.info("Filter fields {}".format(filter_fields))
 
     # build aggregations structure as a Dictionary
     filters = {}
     for field in filter_fields:
+        if field not in lib_data.columns:
+            continue  # skip on to the next filter field
+
         field_id = re.sub(
             r"[^A-Za-z0-9]", "_", field
         )  # replace spaces etc with underscores
 
+        log.debug(
+            "create_query_config: field {}. Is this a multi-option field? {}".format(
+                field, field in MULTI_OPTION_COLS
+            )
+        )
         if field in MULTI_OPTION_COLS:
             unique_filters = set(x for sublist in lib_data[field] for x in sublist)
         else:
@@ -216,6 +255,9 @@ def create_query_config(log, lib_data, search_fields, filter_fields):
             )
         )
         filters[field_id] = {"title": field, "size": len(unique_filters)}
+        # log.debug(
+        #     "create_query_string: filters[{}]: {}".format(field_id, filters[field_id])
+        # )
 
     query_config = {
         "sortings": {
@@ -244,6 +286,10 @@ def create_query_config(log, lib_data, search_fields, filter_fields):
 
 
 if __name__ == "__main__":
+    # Specify level of entries to log
+    structlog.configure(
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+    )
     log = structlog.get_logger()
 
     # create parser
@@ -262,21 +308,23 @@ if __name__ == "__main__":
     if is_dry_run:
         log.info("This is a dry-run, no changes will be made")
 
-    log.info("Loading csv file from {}".format(files.libindex_csv))
+    log.info("Loading csv file from {}.".format(files.libindex_csv))
 
     # Read in data from the library-index.csv file and ensure that
     # there are no leading or trailing spaces on the contents
-    lib_data = pd.read_csv(files.libindex_csv, index_col=label.id, dtype="str")
-    lib_data = lib_data.map(lambda x: x.strip() if type(x) == str else x)
+    lib_data = pd.read_csv(
+        files.libindex_csv, dtype="str", skipinitialspace=True
+    ).fillna("NO VALUE")
+    log.info("Initial # rows loaded: {}".format(lib_data.index.size))
 
     lib_data = remove_nonactive_rows(log, lib_data)
     lib_data = remove_invalid_access_rows(log, lib_data)
     lib_data = remove_openaccess_nofilename_rows(log, lib_data)
     lib_data = remove_publisheraccess_nourl_rows(log, lib_data)
+    lib_data = split_multi_option_values(lib_data)
     # must call remove_nonactive_rows last in case it removes a
     # column needed for other processing
     lib_data = remove_private_details(log, lib_data)
-    lib_data = split_multi_option_values(lib_data)
 
     lib_data = create_library_index(log, is_dry_run, lib_data)
     create_query_config(log, lib_data, get_searchable_fields(log), get_filter_list(log))

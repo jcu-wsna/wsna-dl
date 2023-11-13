@@ -14,12 +14,9 @@
     (used for logging).
 """
 import os
-
-# from glob import glob
 import shutil
-
-# from pathlib import Path
 import csv
+import logging
 import structlog
 import argparse
 from confighelper import files, docs, label, status_types, access_types
@@ -37,19 +34,21 @@ def get_filename_path_dict(log, src_path, pattern):
     for file_path in src_path.glob(pattern):
         if file_path.name != ".DS_Store":
             file_list[unicodedata.normalize(UNICODE_FORM, file_path.name)] = file_path
-            # log.debug(
-            #     "get_filename_path_dict: file_path.name({}), file_path({})".format(
-            #         file_path.name, file_path
-            #     )
-            # )
+            log.debug(
+                "get_filename_path_dict: file_path.name({}), file_path({})".format(
+                    file_path.name, file_path
+                )
+            )
 
-    # log.debug("get_filename_path_dict: filename list: {}".format(file_list.keys()))
+    log.debug("get_filename_path_dict: filename list: {}".format(file_list.keys()))
     return file_list
 
 
 if __name__ == "__main__":
+    structlog.configure(
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+    )
     log = structlog.get_logger()
-    # log.setLevel(logging.DEBUG)
 
     # create parser
     parser = argparse.ArgumentParser()
@@ -92,17 +91,17 @@ if __name__ == "__main__":
             for key, value in row.items():
                 row[key] = value.rstrip()
 
-            # log.debug(
-            #     "row[{}]({})  access_types.open({}) status_type.active({})  row[{}]({})".format(
-            #         label.access,
-            #         row[label.access].lower(),
-            #         access_types.open,
-            #         status_types.active,
-            #         label.status,
-            #         row[label.status].lower(),
-            #     )
-            # )
-            if (row[label.access].lower() == access_types.open) and (
+            log.debug(
+                "row[{}]({})  access_types.open({}) status_type.active({})  row[{}]({})".format(
+                    label.access,
+                    row[label.access].lower(),
+                    access_types.open,
+                    status_types.active,
+                    label.status,
+                    row[label.status].lower(),
+                )
+            )
+            if (row[label.access].lower() == access_types.open.lower()) and (
                 status_types.active == ""
                 or (row[label.status].lower() == status_types.active.lower())
             ):
@@ -122,8 +121,8 @@ if __name__ == "__main__":
                     continue  # no filename to work with so log it and move on
 
                 try:
-                    # log.debug("recorded_pdf_filename: {}".format(src_filename))
-                    # log.debug("source_file_list {}".format(src_file_list))
+                    log.debug("recorded_pdf_filename: {}".format(src_filename))
+                    log.debug("source_file_list {}".format(src_file_list))
                     src_filepath = src_file_list[
                         unicodedata.normalize(UNICODE_FORM, src_filename)
                     ]
