@@ -17,6 +17,7 @@ search-output.json
 ~*.*
 scripts/*.log
 scripts/*.txt
+!scripts/requirements.txt
 scripts/*.out
 scripts/*.tmp
 scripts/inputs/*
