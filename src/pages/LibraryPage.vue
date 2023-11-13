@@ -66,7 +66,7 @@ function getDocList(fullDocList) {
   console.log("getDocList: selectedFilters.value - ", selectedFilters);
 
   let results = itemsjsInstance.search({
-    per_page: 100,
+    per_page: 200,
     query: searchQuery,
     filters: selectedFilters,
     sort: "year_name_asc", // defined in filterConfig.sortings
