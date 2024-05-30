@@ -4,8 +4,6 @@
 node_modules
 .npmrc
 
-library-config.ini
-
 # Avoid duplicate copies of documents,
 # these will all be in the gh_pages branch anyway.
 public/documents
