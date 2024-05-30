@@ -26,18 +26,15 @@ df = pd.read_excel(
 df.columns = col_labels
 
 filter_data = (
-    df.iloc[[0]]
-    .replace({"Filter_yes": True, "Filter_no": False})
+    (df.iloc[[0]] == "Filter_yes")
     .to_csv(files.filter_config, index=False)
 )
 search_data = (
-    df.iloc[[1]]
-    .replace({"Search_yes": True, "Search_no": False})
+    (df.iloc[[1]] == 'Search_yes')
     .to_csv(files.search_config, index=False)
 )
 full_display_data = (
-    df.iloc[[2]]
-    .replace({"FullDisplay_yes": True, "FullDisplay_no": False})
+    (df.iloc[[2]] == "FullDisplay_yes")
     .to_csv(files.doc_display_config, index=False)
 )
 
